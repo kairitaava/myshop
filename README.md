@@ -1,2 +1,2 @@
 # myshop
-Project for python course
+Final project for python course
