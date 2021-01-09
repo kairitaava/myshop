@@ -70,19 +70,42 @@
 		</div>
 	</div>
 
-	<script src="https://www.paypal.com/sdk/js?client-id=ATO8zWajDzfV4p7pmeZaZ-Rg2eI2UrG23Sjx_OURqA8NVn93FGEamZwId4YJ7HYlmsfSz91ozEHLD-hg&currency=EUR"></script>
+	<script src="https://www.paypal.com/sdk/js?client-id=ATO8zWajDzfV4p7pmeZaZ-Rg2eI2UrG23Sjx_OURqA8NVn93FGEamZwId4YJ7HYlmsfSz91ozEHLD-hg&currency=EUR&disable-funding=credit"></script>
 	<script>
-	var total = '{{order.get_cart_total}}
-
+	var total = '{{order.get_cart_total}}'
         // Render the PayPal button into #paypal-button-container
-    paypal.Buttons().render('#paypal-button-container');
+        paypal.Buttons({
+        	style: {
+          color:  'blue',
+          shape:  'rect',
+       },
+
+            // Set up the transaction
+            createOrder: function(data, actions) {
+                return actions.order.create({
+                    purchase_units: [{
+                        amount: {
+                            value:parseFloat(total).toFixed(2)
+                        }
+                    }]
+                });
+            },
+
+            // Finalize the transaction
+            onApprove: function(data, actions) {
+                return actions.order.capture().then(function(details) {
+                    // Show a success message to the buyer
+                    submitFormData()
+                });
+            }
 
 
+        }).render('#paypal-button-container');
     </script>
 
 	<script type="text/javascript">
 		var shipping = '{{shipping}}'
-		var total = '{{order.get_cart_total}}'
+
 
 		if (shipping == 'False'){
 			document.getElementById('shipping-info').innerHTML = ''
