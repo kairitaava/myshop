@@ -1,9 +1,59 @@
-from django.shortcuts import render
-from django.http import JsonResponse
+from django.shortcuts import render, redirect
+from django.http import JsonResponse, HttpResponse, request
 import json
 import datetime
+
 from .models import *
 from .utils import cookieCart, cartData, guestOrder
+from .forms import OrderForm, CreateUserForm
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.contrib.auth.models import Group
+
+
+def registerPage(request):
+    form = CreateUserForm()
+    if request.method == 'POST':
+        form = CreateUserForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            username = form.cleaned_data.get('username')
+
+            group = Group.objects.get(name='User')
+            user.groups.add(group)
+
+            Customer.objects.create(
+                user=user,
+                name=user.username,
+            )
+            messages.success(request, 'Account was created for ' + username)
+
+            return redirect('login')
+
+    context = {'form': form}
+    return render(request, 'store/register.html', context)
+
+
+def loginPage(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            return redirect('store')
+        else:
+            messages.info(request, 'Username OR password is incorrect')
+
+    context = {}
+    return render(request, 'store/login.html', context)
+
+
+def logoutUser(request):
+    logout(request)
+    return redirect('store')
 
 
 def store(request):
@@ -16,6 +66,19 @@ def store(request):
     products = Product.objects.all()
     context = {'products': products, 'cartItems': cartItems}
     return render(request, 'store/store.html', context)
+
+
+def userPage(request):
+    data = cartData(request)
+    cartItems = data['cartItems']
+    products = Product.objects.all()
+
+    orders = request.user.customer.order_set.all()
+
+    print('ORDERS:', orders)
+
+    context = {'orders': orders, 'products': products, 'cartItems': cartItems}
+    return render(request, 'store/user.html', context)
 
 
 def cart(request):
@@ -75,12 +138,38 @@ def processOrder(request):
         order, created = Order.objects.get_or_create(customer=customer, complete=False)
 
     else:
-        customer, order = guestOrder(request, data)
+        print('User is not logged in')
+
+        print('COOKIES:', request.COOKIES)
+        name = data['form']['name']
+        email = data['form']['email']
+
+        cookieData = cookieCart(request)
+        items = cookieData['items']
+
+        customer, created = Customer.objects.get_or_create(
+            email=email,
+        )
+        customer.name = name
+        customer.save()
+
+        order = Order.objects.create(
+            customer=customer,
+            complete=False,
+        )
+
+        for item in items:
+            product = Product.objects.get(id=item['id'])
+            orderItem = OrderItem.objects.create(
+                product=product,
+                order=order,
+                quantity=item['quantity'],
+            )
 
     total = float(data['form']['total'])
     order.transaction_id = transaction_id
 
-    if total == order.get_cart_total:
+    if total == float(order.get_cart_total):
         order.complete = True
     order.save()
 

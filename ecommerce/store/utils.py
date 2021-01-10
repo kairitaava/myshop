@@ -3,7 +3,6 @@ from .models import *
 
 
 def cookieCart(request):
-
     try:
         cart = json.loads(request.COOKIES['cart'])
     except:
@@ -82,5 +81,3 @@ def guestOrder(request, data):
             quantity=item['quantity'],
         )
     return customer, order
-
-

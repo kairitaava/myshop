@@ -64,7 +64,13 @@
 
 	console.log('Cart:', cart)
 	</script>
-
+<style>
+	#hello-msg{
+	font-size: 18px;
+	color: #fff;
+	margin-right: 20px;
+	}
+</style>
 
 </head>
 <body>
@@ -84,10 +90,17 @@
 
 	    </ul>
             <!-- Login -->
+		 {% if request.user.is_anonymous %}
 	    <div class="form-inline my-2 my-lg-0">
-	     	<a href="#"class="btn btn-warning">Login</a>
+	     	<a href="{% url 'login'%}"class="btn btn-warning">Login</a>
 
-	     	<a href="{% url 'cart' %}">
+		{% else %}
+			<span class="form-inline my-2 my-lg-0" id="hello-msg">Hello, {{request.user}}!</span>
+
+			<span><a class="btn btn-secondary" href="{% url 'logout' %}">Logout</a></span>
+		{% endif %}
+
+			<a href="{% url 'cart' %}">
 	    		<img  id="cart-icon" src="{% static 'images/cart.png' %}">
 	    	</a>
 	    	<p id="cart-total">{{cartItems}}</p>
